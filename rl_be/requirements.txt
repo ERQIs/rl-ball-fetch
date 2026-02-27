@@ -1,0 +1,5 @@
+mlagents==1.1.0
+tensorboard>=2.12,<3
+setuptools<81
+torch==2.1.2
+numpy==1.23.5
