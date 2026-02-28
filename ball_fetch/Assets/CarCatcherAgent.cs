@@ -20,6 +20,8 @@ public class CarCatcherAgent : Agent
     [Header("Episode Settings")]
     public float stepPenalty = -0.001f;
     public float distanceRewardScale = 0.002f; // 可选：越靠近篮子中心越好
+    public float catchReward = 3.0f;
+    public float missReward = -1.0f;
     public float arenaRadius = 6f;
 
 
@@ -114,14 +116,14 @@ public class CarCatcherAgent : Agent
     // 被 CatchZone 调用
     public void OnBallCaught()
     {
-        AddReward(1.0f);
+        AddReward(catchReward);
         if (!debugNoEndEpisode) EndEpisode();
     }
 
     // 被 Ball / Spawner 调用：球落地或超界
     public void OnBallMissed()
     {
-        AddReward(-1.0f);
+        AddReward(missReward);
         if (!debugNoEndEpisode) EndEpisode();
     }
 

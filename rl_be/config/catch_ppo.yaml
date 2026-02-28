@@ -12,10 +12,10 @@ behaviors:
       num_epoch: 3
       learning_rate_schedule: linear
     network_settings:
-      # Policy/value network: MLP, 2 hidden layers x 128 units
+      # Policy/value network: MLP, 8 hidden layers x 64 units
       normalize: true
-      hidden_units: 128
-      num_layers: 2
+      hidden_units: 64
+      num_layers: 8
     reward_signals:
       extrinsic:
         gamma: 0.99
