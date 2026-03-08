@@ -43,6 +43,45 @@ rl_be/.venv310/
 rl_be/results/
 rl_be/models/
 rl_be/summaries/
+rl_be/runs/
+rl_be/wandb/
+rl_be/*.onnx
+rl_be/*.pt
+rl_be/*.pth
+rl_be/checkpoints/
+
+# Vision pipeline outputs
+ball_fetch/vis_backbone/datasets/
+ball_fetch/vis_backbone/datasets/**
+ball_fetch/vis_backbone/**/manual_capture/
+ball_fetch/vis_backbone/**/manual_capture/**
+ball_fetch/vis_backbone/outputs/
+ball_fetch/vis_backbone/checkpoints/
+vis_backbone/datasets/
+vis_backbone/datasets/**
+vis_backbone/**/manual_capture/
+vis_backbone/**/manual_capture/**
+vis_backbone/outputs/
+vis_backbone/checkpoints/
+vis_backbone/logs/
+vis_backbone/**/*.png
+vis_backbone/**/*.jpg
+vis_backbone/**/*.jpeg
+vis_backbone/**/*.csv
+
+# Unity recovery / profiling
+ball_fetch/Assets/_Recovery/
+ball_fetch/Assets/ML-Agents/Timers/
+*.stacktrace
+*.trace
+*.diag
+
+# OS / misc temp
+.DS_Store
+Thumbs.db
+*.log
+*.bak
+*.swp
 
 # Archives
 *.rar

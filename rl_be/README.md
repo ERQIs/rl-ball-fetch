@@ -1,58 +1,55 @@
-# RL Ball Fetch 实验说明（Unity + ML-Agents）
+# RL Ball Fetch 实验说明（Tracking v0）
 
-## 1. 实验目的
+## 1. 实验目标
 
-本项目目标是训练一个小车智能体，在 Unity 物理环境中移动并接住抛出的球。  
-核心任务可定义为：
+训练一个小车智能体在球飞行过程中移动到底盘上的接球点（basket center）附近，并最终让球进入接球触发区。
 
-- 输入：环境状态（当前为向量观测）
-- 输出：左右轮离散动作
-- 目标：最大化累计奖励（尽可能多接球、尽可能少漏接）
+- 成功：球进入 `CatchZone`（触发 `OnBallCaught`）
+- 失败：球触地（`OnBallMissed`）/ 小车出界 / 回合超时
 
 ---
 
-## 2. 实验环境
+## 2. 环境与依赖
 
-### Unity 侧
+### Unity
 
 - Unity Editor: `6000.3.10f1`
-- Unity Package: `com.unity.ml-agents = 4.0.2`
-- 主训练行为名（Behavior Name）: `CarCatch`
-- 场景：`CatchCarScene`
+- ML-Agents Package: `com.unity.ml-agents 4.0.2`
+- Behavior Name: `CarCatch`
+- Scene: `CatchCarScene`
 
-### Python 侧
+### Python
 
-- 推荐 Python 版本：`3.10.x`
-- 关键依赖（见 `requirements.txt`）：
+- Python: `3.10.x`
+- 关键依赖（`requirements.txt`）：
   - `mlagents==1.1.0`
   - `torch==2.1.2`
   - `numpy==1.23.5`
   - `tensorboard>=2.12,<3`
   - `setuptools<81`
 
-说明：该依赖组合用于避免 checkpoint/ONNX 导出阶段的兼容性问题。
-
 ---
 
-## 3. 小车与环境配置（Unity）
+## 3. Agent 与场景配置
 
-### 3.1 CarCatcherAgent（小车）
+## 3.1 小车控制（连续动作）
 
-主要参数（当前场景序列化值）：
+`CarCatcherAgent` 采用连续速度控制，不再使用差速轮离散动作：
 
-- `wheelForce = 25`
-- `maxSpeed = 8`
-- `angularDamping = 0.2`
+- `maxForwardSpeed = 8`
+- `maxLateralSpeed = 8`
+- `keepFixedHeading = true`（固定朝向，不允许旋转）
 - `arenaRadius = 6`
-- `centerOfMassLocal = (0, -0.25, 0)`
+- `defaultMaxStep = 600`
 
-动作执行频率：
+手动模式（Heuristic）：
 
-- `DecisionPeriod = 1`（每个物理步都做决策）
+- `W/S`：前后移动
+- `A/D`：左右平移
 
-### 3.2 球生成与轨迹（BallSpawner / Ball）
+## 3.2 球生成
 
-BallSpawner 参数（当前场景序列化值）：
+`BallSpawner` 在小车前方随机位置抛球，并给定随机飞行时间：
 
 - `spawnHeight = 2`
 - `minForwardDist = 6`
@@ -62,67 +59,59 @@ BallSpawner 参数（当前场景序列化值）：
 - `Tmax = 3`
 - `landingNoise = 3`
 
-Ball 逻辑：
-
-- 根据目标落点与飞行时间反推初速度，使球以抛体轨迹飞向篮筐附近
-- 球触地（Ground）判定为 miss，触发失败奖励与回合结束
-
 ---
 
 ## 4. 模型输入输出
 
-## 4.1 输入（Observation）
+## 4.1 Observation（12 维）
 
-当前不是图像输入，而是 **12 维向量输入**（`CollectObservations`）：
+每步观测：
 
-1. `relPos`：球相对篮筐中心位置（3 维）
-2. `relVel`：球相对小车速度（3 维）
-3. `transform.forward`：小车朝向（3 维）
-4. `rb.linearVelocity`：小车线速度（3 维）
+1. `delta_pos = p_ball - p_catchPoint`（3）
+2. `ball_vel`（3）
+3. `base_vel`（3）
+4. `dir_to_ball = normalize(delta_pos)`（3）
 
-合计：`12` 维。
+总计：`12` 维向量。
 
-## 4.2 输出（Action）
+## 4.2 Action（连续 2 维）
 
-动作为离散动作，配置为：
+`a = [v_forward, v_lateral]`，每维 `[-1, 1]`，映射到目标平面速度：
 
-- 连续动作数：`0`
-- 离散分支：`[5, 5]`（左右轮各 5 档）
-
-代码映射：
-
-- `DiscreteActions[0]` -> 左轮
-- `DiscreteActions[1]` -> 右轮
-- 档位 `0..4` 映射到控制量 `[-1, -0.5, 0, 0.5, 1]`
+- `v_forward * maxForwardSpeed`
+- `v_lateral * maxLateralSpeed`
 
 ---
 
-## 5. 奖励函数
+## 5. 奖励函数（Tracking 风格）
 
-当前奖励由三部分组成：
+在 `OnActionReceived` 中使用：
 
-1. 每步惩罚（step penalty）  
-   - `r_step = stepPenalty = -0.001`
+- `d = ||p_ball - p_catchPoint||`
+- `r_pos = d_prev - d`（鼓励“进步”）
+- `r_prec = exp(-k*d)`（近距离精度 shaping，`k=precisionK`）
+- `r_ctrl = -c*||a||^2`（控制惩罚，`c=controlPenaltyScale`）
 
-2. 距离惩罚（稠密项）  
-   - `r_dist = -distance(ball, basketCenter) * distanceRewardScale`
-   - `distanceRewardScale = 0.002`
+每步奖励：
 
-3. 终局奖励  
-   - 接到球：`catchReward = +3.0`
-   - 漏接球：`missReward = -1.0`
+- `r_step = progressRewardScale * r_pos + precisionRewardScale * r_prec + r_ctrl`
 
-因此可写作：
+终局奖励：
 
-- 非终局步：`r_t = -0.001 - 0.002 * d_t`
-- 接球终局额外加：`+3.0`
-- 漏接终局额外加：`-1.0`
+- success：`catchReward = +5`
+- miss：`missReward = -3`
+- out of arena：`outOfArenaPenalty = -3`
+
+默认权重：
+
+- `precisionK = 3`
+- `progressRewardScale = 10`
+- `precisionRewardScale = 2`
+- `controlPenaltyScale = 0.02`
 
 ---
 
-## 6. 训练模型配置（PPO）
-
-配置文件：`config/catch_ppo.yaml`
+## 6. PPO 配置（`config/catch_ppo.yaml`）
 
 - `trainer_type: ppo`
 - `batch_size: 512`
@@ -132,17 +121,16 @@ Ball 逻辑：
 - `epsilon: 0.2`
 - `lambd: 0.95`
 - `num_epoch: 3`
-- `learning_rate_schedule: linear`
 - `normalize: true`
-- `hidden_units: 64`
-- `num_layers: 8`
+- `hidden_units: 256`
+- `num_layers: 2`
 - `gamma: 0.99`
-- `checkpoint_interval: 50000`
-- `max_steps: 500000`
 - `time_horizon: 128`
+- `max_steps: 500000`
+- `checkpoint_interval: 50000`
 - `summary_freq: 5000`
 
-引擎设置：
+引擎参数：
 
 - `time_scale: 20`
 - `target_frame_rate: -1`
@@ -152,43 +140,38 @@ Ball 逻辑：
 
 ## 7. 如何开始训练
 
-## 7.1 在 Unity Editor 中训练
+## 7.1 Editor 训练（推荐）
 
-1. 打开 `CatchCarScene`
-2. 点击 Unity `Play`
-3. 在 `rl_be` 目录启动训练：
+1. 打开 Unity 项目 `ball_fetch`
+2. 打开 `CatchCarScene`
+3. 点击 Unity `Play`
+4. 在 `rl_be` 目录执行：
 
 ```powershell
-.\.venv\Scripts\python.exe -m mlagents.trainers.learn .\config\catch_ppo.yaml --run-id carcatch_v2 --force --timeout-wait 300
+cd d:\projects\rl-ball-fetch\rl_be
+.\.venv\Scripts\python.exe -m mlagents.trainers.learn .\config\catch_ppo.yaml --run-id carcatch_tracking_v1 --force --timeout-wait 300
 ```
 
-继续训练（resume）：
+继续训练：
 
 ```powershell
-.\.venv\Scripts\python.exe -m mlagents.trainers.learn .\config\catch_ppo.yaml --run-id carcatch_v2 --resume --timeout-wait 300
+cd d:\projects\rl-ball-fetch\rl_be
+.\.venv\Scripts\python.exe -m mlagents.trainers.learn .\config\catch_ppo.yaml --run-id carcatch_tracking_v1 --resume --timeout-wait 300
 ```
 
-## 7.2 使用脚本训练（默认 .venv310）
-
-仓库内脚本默认使用 `.venv310`：
-
-- `scripts/setup_env.ps1`
-- `scripts/train_editor.ps1`
-- `scripts/train_build.ps1`
-- `scripts/tensorboard.ps1`
-
-如果你当前使用的是 `.venv`，建议直接使用上面的 Python 命令，或将脚本中的 `.venv310` 改为 `.venv`。
-
----
-
-## 8. 日志与结果
-
-- 训练输出目录：`rl_be/results/<run-id>/`
-- TensorBoard：
+## 7.2 查看训练曲线
 
 ```powershell
+cd d:\projects\rl-ball-fetch\rl_be
 .\.venv\Scripts\python.exe -m tensorboard.main --logdir .\results --port 6006
 ```
 
-浏览器打开：`http://localhost:6006`
+打开：`http://localhost:6006`
+
+---
+
+## 8. 结果目录
+
+- 训练输出：`rl_be/results/<run-id>/`
+- 模型与 checkpoint：`rl_be/results/<run-id>/`
 

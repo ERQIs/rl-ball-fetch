@@ -255,7 +255,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: -9.8, z: 0}
-  m_LocalScale: {x: 0.3, y: 0.3, z: 0.3}
+  m_LocalScale: {x: 0.6, y: 0.6, z: 0.6}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -276,7 +276,7 @@ MonoBehaviour:
   agent: {fileID: 0}
   predictedLandingPoint: {x: 0, y: 0, z: 0}
   predictedT: 0
-  gravityScale: 1
+  gravityScale: 0.5
 --- !u!1 &62229844
 GameObject:
   m_ObjectHideFlags: 0
@@ -517,6 +517,8 @@ GameObject:
   - component: {fileID: 265686993}
   - component: {fileID: 265686992}
   - component: {fileID: 265686995}
+  - component: {fileID: 265686996}
+  - component: {fileID: 265686997}
   m_Layer: 0
   m_Name: Car
   m_TagString: Untagged
@@ -611,10 +613,11 @@ Transform:
   m_GameObject: {fileID: 265686987}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.2, z: 0}
+  m_LocalPosition: {x: 0, y: 0.2, z: -10}
   m_LocalScale: {x: 1.2, y: 0.4, z: 1.8}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 1898446431}
   - {fileID: 1747253661}
   - {fileID: 1760449923}
   - {fileID: 1201581833}
@@ -665,20 +668,26 @@ MonoBehaviour:
   hasUpgradedFromAgentParameters: 1
   MaxStep: 0
   rb: {fileID: 265686992}
-  driveLeft: {fileID: 1760449923}
-  driveRight: {fileID: 1201581833}
   basketCenter: {fileID: 1757003719}
   spawner: {fileID: 830350349}
-  wheelForce: 25
-  maxSpeed: 8
-  angularDamping: 0.2
-  stepPenalty: -0.001
-  distanceRewardScale: 0.002
-  catchReward: 3
-  missReward: -1
+  maxForwardSpeed: 8
+  maxLateralSpeed: 8
+  keepFixedHeading: 1
+  useVectorObs: 0
+  heuristicActionScale: 0.4
   arenaRadius: 6
-  centerOfMassLocal: {x: 0, y: -0.25, z: 0}
-  antiTipTorque: 0
+  defaultMaxStep: 600
+  episodeStartPosition: {x: 0, y: 0.2, z: -5}
+  precisionK: 2.7
+  progressRewardScale: 0
+  precisionRewardScale: 70
+  landingProgressRewardScale: 5
+  controlPenaltyScale: 0.02
+  catchReward: 0
+  missReward: 0
+  outOfArenaPenalty: -3
+  showRewardHud: 1
+  hudFontSize: 20
   debugNoEndEpisode: 0
 --- !u!114 &265686994
 MonoBehaviour:
@@ -696,11 +705,11 @@ MonoBehaviour:
     VectorObservationSize: 1
     NumStackedVectorObservations: 1
     m_ActionSpec:
-      m_NumContinuousActions: 0
-      BranchSizes: 0500000005000000
-    VectorActionSize: 0500000005000000
+      m_NumContinuousActions: 2
+      BranchSizes: 
+    VectorActionSize: 02000000
     VectorActionDescriptions: []
-    VectorActionSpaceType: 0
+    VectorActionSpaceType: 1
     hasUpgradedBrainParametersWithActionSpec: 1
   m_Model: {fileID: 0}
   m_InferenceDevice: 0
@@ -723,9 +732,53 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3a5c9d521e5ef4759a8246a07d52221e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  DecisionPeriod: 1
+  DecisionPeriod: 3
   DecisionStep: 0
   TakeActionsBetweenDecisions: 1
+--- !u!114 &265686996
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 265686987}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 282f342c2ab144bf38be65d4d0c4e07d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Camera: {fileID: 1747253663}
+  m_SensorName: CarCam
+  m_Width: 64
+  m_Height: 64
+  m_Grayscale: 1
+  m_ObservationType: 0
+  m_RuntimeCameraEnable: 1
+  m_ObservationStacks: 6
+  m_Compression: 0
+--- !u!114 &265686997
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 265686987}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8219f73d6c65454f93f3b153d9d46b9f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TrajectorySampler
+  agent: {fileID: 265686993}
+  sourceCamera: {fileID: 1747253663}
+  width: 64
+  height: 64
+  grayscale: 1
+  autoStartOnPlay: 1
+  toggleCaptureKey: 116
+  targetTrajectories: 200
+  maxFramesPerTrajectory: 0
+  outputRelativePath: vis_backbone/datasets/manual_capture
+  writePng: 1
 --- !u!1 &415530716
 GameObject:
   m_ObjectHideFlags: 0
@@ -954,7 +1007,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0.06}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &545576305
@@ -1104,7 +1157,7 @@ Transform:
   m_GameObject: {fileID: 830350347}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 3, z: 20}
+  m_LocalPosition: {x: 0, y: 3, z: 3}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1123,13 +1176,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ballPrefab: {fileID: 40827670}
-  spawnHeight: 2
-  minForwardDist: 6
-  maxForwardDist: 10
-  sideJitter: 2
-  Tmin: 2.5
-  Tmax: 3
-  landingNoise: 3
+  fixedSpawnPosition: {x: 0, y: 1.5, z: 15}
+  landingMinRadius: 3
+  landingMaxRadius: 3.01
+  landingSectorAngleDeg: 120
+  landingHeightOffset: 0
+  Tmin: 2.2
+  Tmax: 2.3
+  showLandingMarker: 0
+  markerScale: 0.35
+  markerColor: {r: 1, g: 0, b: 0, a: 1}
 --- !u!1 &963194225
 GameObject:
   m_ObjectHideFlags: 0
@@ -1187,7 +1243,7 @@ Camera:
     y: 0
     width: 1
     height: 1
-  near clip plane: 0.3
+  near clip plane: 0.03
   far clip plane: 1000
   field of view: 60
   orthographic: 0
@@ -1570,13 +1626,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1747253660}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.258819, y: 0, z: 0, w: 0.9659259}
-  m_LocalPosition: {x: 0, y: 2, z: -0.5}
+  m_LocalRotation: {x: -0.10452837, y: 0, z: 0, w: 0.9945219}
+  m_LocalPosition: {x: -0.012, y: 1.55, z: -0.72}
   m_LocalScale: {x: 2, y: 2, z: 2}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 265686991}
-  m_LocalEulerAnglesHint: {x: -30, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: -12, y: 0, z: 0}
 --- !u!81 &1747253662
 AudioListener:
   m_ObjectHideFlags: 0
@@ -1594,8 +1650,8 @@ Camera:
   m_GameObject: {fileID: 1747253660}
   m_Enabled: 1
   serializedVersion: 2
-  m_ClearFlags: 1
-  m_BackGroundColor: {r: 0.19215687, g: 0.3019608, b: 0.4745098, a: 0}
+  m_ClearFlags: 2
+  m_BackGroundColor: {r: 0.7971698, g: 1, b: 0.8455807, a: 0}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
@@ -1616,9 +1672,9 @@ Camera:
     y: 0
     width: 1
     height: 1
-  near clip plane: 0.3
+  near clip plane: 0.01
   far clip plane: 1000
-  field of view: 100
+  field of view: 26.991467
   orthographic: 0
   orthographic size: 5
   m_Depth: 0
@@ -1703,6 +1759,59 @@ Transform:
   m_Children: []
   m_Father: {fileID: 265686991}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1898446430
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1898446431}
+  - component: {fileID: 1898446432}
+  m_Layer: 0
+  m_Name: CameraVisionDebug
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1898446431
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1898446430}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 2, z: -0.49999982}
+  m_LocalScale: {x: 0.83333325, y: 2.5, z: 0.5555556}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 265686991}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1898446432
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1898446430}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd1b2fac14640db4ca26d58917c8bdb1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CameraVisionDebug
+  sourceCamera: {fileID: 1747253663}
+  width: 64
+  height: 64
+  grayscale: 1
+  captureEveryNFrames: 10
+  showOnScreen: 1
+  savePng: 0
+  overlaySize: 160
+  overlayPadding: 10
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

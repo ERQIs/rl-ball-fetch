@@ -2,144 +2,286 @@ using UnityEngine;
 using Unity.MLAgents;
 using Unity.MLAgents.Actuators;
 using Unity.MLAgents.Sensors;
+using Unity.MLAgents.SideChannels;
 
 public class CarCatcherAgent : Agent
 {
     [Header("References")]
     public Rigidbody rb;
-    public Transform driveLeft;
-    public Transform driveRight;
     public Transform basketCenter;
     public BallSpawner spawner;
 
-    [Header("Drive Settings")]
-    public float wheelForce = 25f;     // 左右轮推力
-    public float maxSpeed = 8f;        // 限速，防止乱飞
-    public float angularDamping = 0.2f;
+    [Header("Base Control (Continuous)")]
+    public float maxForwardSpeed = 8f;
+    public float maxLateralSpeed = 8f;
+    public bool keepFixedHeading = true;
+    public bool useVectorObs = true;
+
+    [Header("Heuristic")]
+    [Range(0.1f, 1f)] public float heuristicActionScale = 0.4f;
 
     [Header("Episode Settings")]
-    public float stepPenalty = -0.001f;
-    public float distanceRewardScale = 0.002f; // 可选：越靠近篮子中心越好
-    public float catchReward = 3.0f;
-    public float missReward = -1.0f;
     public float arenaRadius = 6f;
+    public int defaultMaxStep = 600;
+    public Vector3 episodeStartPosition = new Vector3(0f, 0.2f, -5f);
 
+    [Header("Reward")]
+    public float precisionK = 3f;
+    // public float progressRewardScale = 10f;
+    public float progressRewardScale = 0f;
+    public float precisionRewardScale = 20f;
+    public float landingProgressRewardScale = 25f;
+    public float controlPenaltyScale = 0.02f;
+    public float catchReward = 50f;
+    public float missReward = -50f;
+    public float outOfArenaPenalty = -3f;
 
-    [Header("Stability")]
-    public Vector3 centerOfMassLocal = new Vector3(0f, -0.25f, 0f);
-    public float antiTipTorque = 0f; // 先不管，可选
-
+    [Header("Debug Reward HUD")]
+    public bool showRewardHud = true;
+    public int hudFontSize = 20;
 
     public bool debugNoEndEpisode = false;
 
     private Ball currentBall;
+    private float prevDistance;
+    private float prevLandingDistance;
+    private Vector2 lastAction;
+    private Quaternion fixedRotation;
+    private GUIStyle hudStyle;
+    private float lastRewardTotal;
+    private float lastRewardPos;
+    private float lastRewardLanding;
+    private float lastRewardPrec;
+    private float lastRewardCtrl;
+    private float lastRewardTerminal;
+    private float lastBallDistance;
+    private float lastLandingDistance;
+    private int episodeIndex = -1;
+
+    public Vector2 LastAction => lastAction;
+    public Ball CurrentBall => currentBall;
+    public int EpisodeIndex => episodeIndex;
 
     public override void Initialize()
     {
         if (rb == null) rb = GetComponent<Rigidbody>();
-        rb.maxAngularVelocity = 20f;
-        rb.centerOfMass = centerOfMassLocal;
+
+        fixedRotation = Quaternion.identity;
+        rb.centerOfMass = new Vector3(0f, -0.25f, 0f);
+
+        if (keepFixedHeading)
+        {
+            rb.constraints = RigidbodyConstraints.FreezeRotationX |
+                             RigidbodyConstraints.FreezeRotationY |
+                             RigidbodyConstraints.FreezeRotationZ;
+        }
+
+        if (MaxStep <= 0)
+        {
+            MaxStep = defaultMaxStep;
+        }
     }
 
     public override void OnEpisodeBegin()
     {
-        // Reset car pose
+        episodeIndex += 1;
         rb.linearVelocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
+        lastAction = Vector2.zero;
 
-        Vector3 pos = new Vector3(
-            Random.Range(-arenaRadius * 0.4f, arenaRadius * 0.4f),
-            0.5f,
-            Random.Range(-arenaRadius * 0.4f, arenaRadius * 0.4f)
-        );
-        transform.position = pos;
-        transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
+        transform.position = episodeStartPosition;
+        transform.rotation = fixedRotation;
 
-        // Spawn / reset ball
         currentBall = spawner.SpawnOrResetBall(this);
+        prevDistance = GetBallDistance();
+        prevLandingDistance = GetLandingPointDistanceXZ();
+        lastRewardTotal = 0f;
+        lastRewardPos = 0f;
+        lastRewardLanding = 0f;
+        lastRewardPrec = 0f;
+        lastRewardCtrl = 0f;
+        lastRewardTerminal = 0f;
+        lastBallDistance = prevDistance;
+        lastLandingDistance = prevLandingDistance;
     }
 
     public override void CollectObservations(VectorSensor sensor)
     {
-        if (currentBall == null)
+        if (!useVectorObs)
         {
-            // 占位，避免空引用
-            sensor.AddObservation(Vector3.zero);
-            sensor.AddObservation(Vector3.zero);
-            sensor.AddObservation(transform.forward);
-            sensor.AddObservation(rb.linearVelocity);
             return;
         }
 
-        Vector3 relPos = currentBall.transform.position - basketCenter.position;
-        Vector3 relVel = currentBall.rb.linearVelocity - rb.linearVelocity;
+        if (currentBall == null)
+        {
+            sensor.AddObservation(Vector3.zero); // delta_pos
+            sensor.AddObservation(Vector3.zero); // ball_vel
+            sensor.AddObservation(Vector3.zero); // base_vel
+            sensor.AddObservation(Vector3.zero); // dir_to_ball
+            return;
+        }
 
-        // 关键状态观测（建议先保留，训练快很多）
-        sensor.AddObservation(relPos);                 // 3
-        sensor.AddObservation(relVel);                 // 3
-        sensor.AddObservation(transform.forward);      // 3
-        sensor.AddObservation(rb.linearVelocity);            // 3
-        // 总计 12 维（外加相机图像观测）
+        Vector3 deltaPos = currentBall.transform.position - basketCenter.position;
+        Vector3 ballVel = currentBall.rb.linearVelocity;
+        Vector3 baseVel = rb.linearVelocity;
+        Vector3 dirToBall = deltaPos.sqrMagnitude > 1e-6f ? deltaPos.normalized : Vector3.zero;
+
+        sensor.AddObservation(deltaPos);  // 3
+        sensor.AddObservation(ballVel);   // 3
+        sensor.AddObservation(baseVel);   // 3
+        sensor.AddObservation(dirToBall); // 3
     }
 
     public override void OnActionReceived(ActionBuffers actions)
     {
-        // Discrete: 0..4 => -2,-1,0,1,2
-        int aL = actions.DiscreteActions[0];
-        int aR = actions.DiscreteActions[1];
-        float leftCmd  = (aL - 2) / 2f;   // -1..1
-        float rightCmd = (aR - 2) / 2f;
+        // a = [v_forward, v_lateral], each in [-1, 1]
+        float forwardCmd = Mathf.Clamp(actions.ContinuousActions[0], -1f, 1f);
+        float lateralCmd = Mathf.Clamp(actions.ContinuousActions[1], -1f, 1f);
+        lastAction = new Vector2(forwardCmd, lateralCmd);
 
-        // 差速驱动：在左右驱动点施加前向力
-        Vector3 fwd = transform.forward;
-        rb.AddForceAtPosition(fwd * (leftCmd * wheelForce), driveLeft.position, ForceMode.Force);
-        rb.AddForceAtPosition(fwd * (rightCmd * wheelForce), driveRight.position, ForceMode.Force);
+        Vector3 targetPlanarVel =
+            transform.forward * (forwardCmd * maxForwardSpeed) +
+            transform.right * (lateralCmd * maxLateralSpeed);
 
-        // 简单阻尼+限速，稳定训练
-        rb.angularVelocity *= (1f - angularDamping * Time.fixedDeltaTime);
+        rb.linearVelocity = new Vector3(targetPlanarVel.x, rb.linearVelocity.y, targetPlanarVel.z);
 
-        Vector3 v = rb.linearVelocity;
-        if (v.magnitude > maxSpeed)
-            rb.linearVelocity = v.normalized * maxSpeed;
+        if (keepFixedHeading)
+        {
+            transform.rotation = fixedRotation;
+            rb.angularVelocity = Vector3.zero;
+        }
 
-        // step penalty
-        AddReward(stepPenalty);
-
-        // 可选：密集奖励（球靠近篮子中心更好）
         if (currentBall != null)
         {
-            float d = Vector3.Distance(currentBall.transform.position, basketCenter.position);
-            AddReward(-d * distanceRewardScale);
+            float d = GetBallDistance();
+            float rPos = prevDistance - d;
+            float landingDistance = GetLandingPointDistanceXZ();
+            float rLandingPos = prevLandingDistance - landingDistance;
+            float rPrec = Mathf.Exp(-precisionK * d);
+            float rCtrl = -controlPenaltyScale * lastAction.sqrMagnitude;
+            float rewardPosTerm = progressRewardScale * rPos;
+            float rewardLandingTerm = landingProgressRewardScale * rLandingPos;
+            float rewardPrecTerm = precisionRewardScale * rPrec;
+            float rewardTotal = rewardPosTerm + rewardLandingTerm + rewardPrecTerm + rCtrl;
+
+            AddReward(rewardTotal);
+            prevDistance = d;
+            prevLandingDistance = landingDistance;
+            lastRewardPos = rewardPosTerm;
+            lastRewardLanding = rewardLandingTerm;
+            lastRewardPrec = rewardPrecTerm;
+            lastRewardCtrl = rCtrl;
+            lastRewardTerminal = 0f;
+            lastRewardTotal = rewardTotal;
+            lastBallDistance = d;
+            lastLandingDistance = landingDistance;
+        }
+        else
+        {
+            // Small penalty if no target exists in this step.
+            AddReward(-0.001f);
+            lastRewardPos = 0f;
+            lastRewardLanding = 0f;
+            lastRewardPrec = 0f;
+            lastRewardCtrl = 0f;
+            lastRewardTerminal = 0f;
+            lastRewardTotal = -0.001f;
+        }
+
+        if (IsOutOfArena())
+        {
+            AddReward(outOfArenaPenalty);
+            lastRewardTerminal = outOfArenaPenalty;
+            lastRewardTotal += outOfArenaPenalty;
+            if (!debugNoEndEpisode) EndEpisode();
         }
     }
 
-    // 被 CatchZone 调用
     public void OnBallCaught()
     {
+        Academy.Instance.StatsRecorder.Add("CarCatch/SuccessRate", 1f, StatAggregationMethod.Average);
         AddReward(catchReward);
+        lastRewardTerminal = catchReward;
+        lastRewardTotal += catchReward;
         if (!debugNoEndEpisode) EndEpisode();
     }
 
-    // 被 Ball / Spawner 调用：球落地或超界
     public void OnBallMissed()
     {
+        Academy.Instance.StatsRecorder.Add("CarCatch/SuccessRate", 0f, StatAggregationMethod.Average);
         AddReward(missReward);
+        lastRewardTerminal = missReward;
+        lastRewardTotal += missReward;
         if (!debugNoEndEpisode) EndEpisode();
     }
 
-    // 方便你手动测试（WASD）
     public override void Heuristic(in ActionBuffers actionsOut)
     {
-        var da = actionsOut.DiscreteActions;
-        // 默认停
-        da[0] = 2; // left wheel stop
-        da[1] = 2; // right wheel stop
+        var ca = actionsOut.ContinuousActions;
+        ca[0] = 0f; // forward/backward
+        ca[1] = 0f; // left/right
 
-        // W/S 前后
-        if (Input.GetKey(KeyCode.W)) { da[0] = 4; da[1] = 4; }
-        if (Input.GetKey(KeyCode.S)) { da[0] = 0; da[1] = 0; }
-        // A/D 原地转
-        if (Input.GetKey(KeyCode.A)) { da[0] = 0; da[1] = 4; }
-        if (Input.GetKey(KeyCode.D)) { da[0] = 4; da[1] = 0; }
+        if (Input.GetKey(KeyCode.W)) ca[0] += 1f;
+        if (Input.GetKey(KeyCode.S)) ca[0] -= 1f;
+        if (Input.GetKey(KeyCode.D)) ca[1] += 1f;
+        if (Input.GetKey(KeyCode.A)) ca[1] -= 1f;
+
+        float scale = Mathf.Clamp(heuristicActionScale, 0.1f, 1f);
+        ca[0] = Mathf.Clamp(ca[0], -1f, 1f) * scale;
+        ca[1] = Mathf.Clamp(ca[1], -1f, 1f) * scale;
+    }
+
+    private float GetBallDistance()
+    {
+        if (currentBall == null) return 0f;
+        return Vector3.Distance(currentBall.transform.position, basketCenter.position);
+    }
+
+    private float GetLandingPointDistanceXZ()
+    {
+        if (currentBall == null) return 0f;
+
+        Vector3 a = basketCenter.position;
+        Vector3 b = currentBall.predictedLandingPoint;
+        a.y = 0f;
+        b.y = 0f;
+        return Vector3.Distance(a, b);
+    }
+
+    private bool IsOutOfArena()
+    {
+        Vector3 p = transform.position;
+        Vector2 planar = new Vector2(p.x, p.z);
+        return planar.magnitude > arenaRadius;
+    }
+
+    private void OnGUI()
+    {
+        if (!showRewardHud || !Application.isPlaying)
+        {
+            return;
+        }
+
+        if (hudStyle == null)
+        {
+            hudStyle = new GUIStyle(GUI.skin.box);
+            hudStyle.fontSize = hudFontSize;
+            hudStyle.alignment = TextAnchor.UpperLeft;
+            hudStyle.normal.textColor = Color.white;
+        }
+
+        string text =
+            $"Step: {StepCount}\n" +
+            $"Cumulative: {GetCumulativeReward():F3}\n" +
+            $"LastTotal: {lastRewardTotal:F3}\n" +
+            $"r_pos: {lastRewardPos:F3}\n" +
+            $"r_land: {lastRewardLanding:F3}\n" +
+            $"r_prec: {lastRewardPrec:F3}\n" +
+            $"r_ctrl: {lastRewardCtrl:F3}\n" +
+            $"r_terminal: {lastRewardTerminal:F3}\n" +
+            $"ball_d: {lastBallDistance:F3}\n" +
+            $"land_d: {lastLandingDistance:F3}";
+
+        GUI.Box(new Rect(10f, 10f, 320f, 280f), text, hudStyle);
     }
 }

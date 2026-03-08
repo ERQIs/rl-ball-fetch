@@ -665,20 +665,20 @@ MonoBehaviour:
   hasUpgradedFromAgentParameters: 1
   MaxStep: 0
   rb: {fileID: 265686992}
-  driveLeft: {fileID: 1760449923}
-  driveRight: {fileID: 1201581833}
   basketCenter: {fileID: 1757003719}
   spawner: {fileID: 830350349}
-  wheelForce: 25
-  maxSpeed: 8
-  angularDamping: 0.2
-  stepPenalty: -0.001
-  distanceRewardScale: 0.002
-  catchReward: 3
-  missReward: -1
+  maxForwardSpeed: 8
+  maxLateralSpeed: 8
+  keepFixedHeading: 1
   arenaRadius: 6
-  centerOfMassLocal: {x: 0, y: -0.25, z: 0}
-  antiTipTorque: 0
+  defaultMaxStep: 600
+  precisionK: 3
+  progressRewardScale: 10
+  precisionRewardScale: 2
+  controlPenaltyScale: 0.02
+  catchReward: 5
+  missReward: -3
+  outOfArenaPenalty: -3
   debugNoEndEpisode: 0
 --- !u!114 &265686994
 MonoBehaviour:
@@ -696,11 +696,11 @@ MonoBehaviour:
     VectorObservationSize: 1
     NumStackedVectorObservations: 1
     m_ActionSpec:
-      m_NumContinuousActions: 0
-      BranchSizes: 0500000005000000
-    VectorActionSize: 0500000005000000
+      m_NumContinuousActions: 2
+      BranchSizes: 
+    VectorActionSize: 
     VectorActionDescriptions: []
-    VectorActionSpaceType: 0
+    VectorActionSpaceType: 1
     hasUpgradedBrainParametersWithActionSpec: 1
   m_Model: {fileID: 0}
   m_InferenceDevice: 0
