@@ -86,3 +86,6 @@ Thumbs.db
 # Archives
 *.rar
 *.zip
+
+# model training checkpoints
+*.pt
