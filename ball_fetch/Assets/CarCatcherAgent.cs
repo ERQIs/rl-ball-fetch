@@ -16,6 +16,7 @@ public class CarCatcherAgent : Agent
     public float maxLateralSpeed = 8f;
     public bool keepFixedHeading = true;
     public bool useVectorObs = true;
+    public bool useSelfVelocityObs = true;
 
     [Header("Heuristic")]
     [Range(0.1f, 1f)] public float heuristicActionScale = 0.4f;
@@ -32,6 +33,7 @@ public class CarCatcherAgent : Agent
     public float precisionRewardScale = 20f;
     public float landingProgressRewardScale = 25f;
     public float controlPenaltyScale = 0.02f;
+    public float actionSmoothPenaltyScale = 0.02f;
     public float catchReward = 50f;
     public float missReward = -50f;
     public float outOfArenaPenalty = -3f;
@@ -53,6 +55,7 @@ public class CarCatcherAgent : Agent
     private float lastRewardLanding;
     private float lastRewardPrec;
     private float lastRewardCtrl;
+    private float lastRewardSmooth;
     private float lastRewardTerminal;
     private float lastBallDistance;
     private float lastLandingDistance;
@@ -100,6 +103,7 @@ public class CarCatcherAgent : Agent
         lastRewardLanding = 0f;
         lastRewardPrec = 0f;
         lastRewardCtrl = 0f;
+        lastRewardSmooth = 0f;
         lastRewardTerminal = 0f;
         lastBallDistance = prevDistance;
         lastLandingDistance = prevLandingDistance;
@@ -107,8 +111,15 @@ public class CarCatcherAgent : Agent
 
     public override void CollectObservations(VectorSensor sensor)
     {
+        if (!useVectorObs && !useSelfVelocityObs)
+        {
+            return;
+        }
+
+        Vector2 planarVel = new Vector2(rb.linearVelocity.x, rb.linearVelocity.z);
         if (!useVectorObs)
         {
+            sensor.AddObservation(planarVel);
             return;
         }
 
@@ -137,7 +148,8 @@ public class CarCatcherAgent : Agent
         // a = [v_forward, v_lateral], each in [-1, 1]
         float forwardCmd = Mathf.Clamp(actions.ContinuousActions[0], -1f, 1f);
         float lateralCmd = Mathf.Clamp(actions.ContinuousActions[1], -1f, 1f);
-        lastAction = new Vector2(forwardCmd, lateralCmd);
+        Vector2 currentAction = new Vector2(forwardCmd, lateralCmd);
+        Vector2 actionDelta = currentAction - lastAction;
 
         Vector3 targetPlanarVel =
             transform.forward * (forwardCmd * maxForwardSpeed) +
@@ -158,11 +170,12 @@ public class CarCatcherAgent : Agent
             float landingDistance = GetLandingPointDistanceXZ();
             float rLandingPos = prevLandingDistance - landingDistance;
             float rPrec = Mathf.Exp(-precisionK * d);
-            float rCtrl = -controlPenaltyScale * lastAction.sqrMagnitude;
+            float rCtrl = -controlPenaltyScale * currentAction.sqrMagnitude;
+            float rSmooth = -actionSmoothPenaltyScale * actionDelta.sqrMagnitude;
             float rewardPosTerm = progressRewardScale * rPos;
             float rewardLandingTerm = landingProgressRewardScale * rLandingPos;
             float rewardPrecTerm = precisionRewardScale * rPrec;
-            float rewardTotal = rewardPosTerm + rewardLandingTerm + rewardPrecTerm + rCtrl;
+            float rewardTotal = rewardPosTerm + rewardLandingTerm + rewardPrecTerm + rCtrl + rSmooth;
 
             AddReward(rewardTotal);
             prevDistance = d;
@@ -171,6 +184,7 @@ public class CarCatcherAgent : Agent
             lastRewardLanding = rewardLandingTerm;
             lastRewardPrec = rewardPrecTerm;
             lastRewardCtrl = rCtrl;
+            lastRewardSmooth = rSmooth;
             lastRewardTerminal = 0f;
             lastRewardTotal = rewardTotal;
             lastBallDistance = d;
@@ -184,9 +198,12 @@ public class CarCatcherAgent : Agent
             lastRewardLanding = 0f;
             lastRewardPrec = 0f;
             lastRewardCtrl = 0f;
+            lastRewardSmooth = 0f;
             lastRewardTerminal = 0f;
             lastRewardTotal = -0.001f;
         }
+
+        lastAction = currentAction;
 
         if (IsOutOfArena())
         {
@@ -278,6 +295,7 @@ public class CarCatcherAgent : Agent
             $"r_land: {lastRewardLanding:F3}\n" +
             $"r_prec: {lastRewardPrec:F3}\n" +
             $"r_ctrl: {lastRewardCtrl:F3}\n" +
+            $"r_smooth: {lastRewardSmooth:F3}\n" +
             $"r_terminal: {lastRewardTerminal:F3}\n" +
             $"ball_d: {lastBallDistance:F3}\n" +
             $"land_d: {lastLandingDistance:F3}";
