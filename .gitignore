@@ -38,6 +38,7 @@ __pycache__/
 venv/
 env/
 rl_be/.venv310/
+temperal/.venv/
 
 # ML-Agents outputs
 rl_be/results/
@@ -68,6 +69,26 @@ vis_backbone/**/*.png
 vis_backbone/**/*.jpg
 vis_backbone/**/*.jpeg
 vis_backbone/**/*.csv
+
+# Temporal / experiment artifacts
+temperal/data/
+temperal/outputs/
+temperal/**/output/
+temperal/**/output/**
+temperal/**/artifacts/
+temperal/**/artifacts/**
+temperal/**/.mplconfig/
+temperal/**/.mplconfig/**
+temperal/**/*.pt
+temperal/**/*.pth
+temperal/**/*.onnx
+
+# Thesis / TeX worktrees
+Tex-Source/
+Tex-Source-template/
+
+# Local eval temp configs
+rl_be/experiments/exp_ec_0001/config/ppo_embodied_recurrent_eval_temp.yaml
 
 # Unity recovery / profiling
 ball_fetch/Assets/_Recovery/

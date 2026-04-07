@@ -63,3 +63,104 @@
 1. 打开 Unity `ball_fetch` 项目并进入 `CatchCarScene`
 2. 按 `rl_be/README.md` 启动 PPO 训练
 3. 先复现实验 1（状态输入），再切到实验 2（视觉输入）
+
+
+
+
+总问题：
+在移动接球任务中，什么样的视觉表征/视觉接口
+能够支持 data-efficient learning 与 few-shot adaptation？
+
+│
+├── Part I. 空间表征：先把“看见什么”这件事做好
+│   │
+│   ├── 问题
+│   │   单帧视觉输入下，什么样的视觉表征更适合作为控制接口？
+│   │
+│   ├── 核心想法
+│   │   在视觉头中引入空间连续性先验（spatial continuity prior），
+│   │   保留 feature map 的空间结构，而不是过早压成全局向量。
+│   │
+│   ├── 方法
+│   │   self-supervised backbone pretraining
+│   │   - grayscale input: (1, 64, 64)
+│   │   - feature map: (8, 8, 8)
+│   │   - reconstruction
+│   │   - feature transport consistency
+│   │   - warp-decoding consistency
+│   │
+│   ├── 结论
+│   │   融合空间连续性先验的视觉表征
+│   │   能提升移动接球任务中的 sample efficiency。
+│   │
+│   └── 意义
+│       说明“结构化的空间视觉接口”是有效的第一步。
+│
+├── Part II. 时序表征：进一步解决“运动如何被理解”
+│   │
+│   ├── 动机
+│   │   接球本质上是运动理解问题；
+│   │   单帧只能看到位置，难以直接推断速度、方向、轨迹趋势。
+│   │
+│   ├── 为了降低复杂度，先研究一个简化 setting
+│   │   让小车先静止观察一段时间（例如 1s），
+│   │   再输出一个速度并执行固定时长。
+│   │
+│   ├── 这样做的好处
+│   │   - 去掉 ego-motion 对视觉的干扰
+│   │   - 让“从时序中提取 motion cue”成为主问题
+│   │   - 更适合做 clean comparison 和 few-shot adaptation
+│   │
+│   ├── 研究问题
+│   │   什么样的 temporal visual representation
+│   │   最适合从静态观察序列中提取运动信息？
+│   │
+│   ├── 对比路线
+│   │   - single frame
+│   │   - frame stack
+│   │   - RNN / GRU
+│   │   - 其他时序架构（老板推荐的模型）
+│   │   - 普通 encoder vs continuity encoder 作为 temporal input
+│   │
+│   └── 目标
+│       不只是证明“多帧比单帧好”，
+│       而是找出“哪种时序表征最有利于 data-efficient control”。
+│
+├── Part III. 训练策略：把学习资源聚焦到“没学会”的地方
+│   │
+│   ├── 动机
+│   │   哪里 loss 高 / error 大，说明模型还没学会；
+│   │   应该把更多训练资源放在那里。
+│   │
+│   ├── 可能做法
+│   │   - prioritized replay
+│   │   - failed episode oversampling
+│   │   - large terminal-miss case prioritization
+│   │   - high TD-error transition prioritization
+│   │
+│   ├── 作用
+│   │   不改变 reward 定义，
+│   │   只改变训练关注点，提高学习效率。
+│   │
+│   └── 目标
+│       研究 focused training 是否能进一步提升
+│       temporal/spatial representation 的下游效果。
+│
+└── Part IV. Few-shot adaptation：回到最终目标
+    │
+    ├── 上层目标
+    │   当小车动力学、速度参数、摩擦等发生变化时，
+    │   能否只用少量交互快速完成适配？
+    │
+    ├── 与前面工作的关系
+    │   - Part I 提供 calibration-friendly 的空间视觉接口
+    │   - Part II 提供 motion-aware 的时序表征
+    │   - Part III 提供更高效的训练策略
+    │
+    ├── 最终问题
+    │   什么样的视觉接口最适合 few-shot calibration/adaptation？
+    │
+    └── 毕设总故事落点
+        从“空间连续性先验”出发，
+        逐步走向“运动表征”与“少样本适配”，
+        最终服务于 embodied visual-motor adaptation。

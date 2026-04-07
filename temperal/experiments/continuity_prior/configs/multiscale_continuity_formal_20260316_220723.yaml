@@ -1,0 +1,33 @@
+dataset:
+  root: "D:/projects/rl-ball-fetch/ball_fetch/vis_backbone/datasets/manual_capture/20260316_220723"
+  train_split_file: "temperal/data/splits_20260316_220723/train.txt"
+  val_split_file: "temperal/data/splits_20260316_220723/val.txt"
+  img_size: 64
+  grayscale: true
+  out_channels: 3
+  pair_step: 1
+
+model:
+  c1: 8
+  c2: 8
+  c3: 8
+
+loss:
+  lambda_rec: 1.0
+  lambda_trans: 1.0
+  lambda_wd: 1.0
+  lambda_nb: 0.1
+  foreground_weight: 6.0
+  foreground_dark_threshold: 0.55
+  foreground_dilate_kernel: 5
+
+training:
+  seed: 42
+  device: auto
+  epochs: 5
+  batch_size: 64
+  lr: 1e-3
+  weight_decay: 0.0
+  log_every_batches: 50
+  output_dir: "temperal/outputs/multiscale_continuity_formal_20260316_220723"
+  tensorboard_dir: "temperal/outputs/multiscale_continuity_formal_20260316_220723/tb"

@@ -157,7 +157,9 @@ public class TrajectorySampler : MonoBehaviour
         csvWriter.WriteLine(
             "frame_idx,step_count,sim_time,action_fwd,action_lat," +
             "car_px,car_py,car_pz,car_vx,car_vy,car_vz," +
-            "ball_px,ball_py,ball_pz,ball_vx,ball_vy,ball_vz");
+            "ball_px,ball_py,ball_pz,ball_vx,ball_vy,ball_vz," +
+            "landing_px,landing_py,landing_pz,predicted_t," +
+            "gravity_ax,gravity_ay,gravity_az");
 
         trajectoryOpen = true;
         trajectoryFrameCount = 0;
@@ -233,11 +235,17 @@ public class TrajectorySampler : MonoBehaviour
 
         Vector3 ballPos = Vector3.zero;
         Vector3 ballVel = Vector3.zero;
+        Vector3 landingPoint = Vector3.zero;
+        Vector3 gravityAccel = Physics.gravity;
+        float predictedT = 0f;
         Ball ball = agent.CurrentBall;
         if (ball != null)
         {
             ballPos = ball.transform.position;
             ballVel = ball.rb != null ? ball.rb.linearVelocity : Vector3.zero;
+            landingPoint = ball.predictedLandingPoint;
+            predictedT = ball.predictedT;
+            gravityAccel = Physics.gravity * ball.gravityScale;
         }
 
         csvWriter.WriteLine(string.Join(",",
@@ -257,7 +265,14 @@ public class TrajectorySampler : MonoBehaviour
             ballPos.z.ToString("F6", CultureInfo.InvariantCulture),
             ballVel.x.ToString("F6", CultureInfo.InvariantCulture),
             ballVel.y.ToString("F6", CultureInfo.InvariantCulture),
-            ballVel.z.ToString("F6", CultureInfo.InvariantCulture)
+            ballVel.z.ToString("F6", CultureInfo.InvariantCulture),
+            landingPoint.x.ToString("F6", CultureInfo.InvariantCulture),
+            landingPoint.y.ToString("F6", CultureInfo.InvariantCulture),
+            landingPoint.z.ToString("F6", CultureInfo.InvariantCulture),
+            predictedT.ToString("F6", CultureInfo.InvariantCulture),
+            gravityAccel.x.ToString("F6", CultureInfo.InvariantCulture),
+            gravityAccel.y.ToString("F6", CultureInfo.InvariantCulture),
+            gravityAccel.z.ToString("F6", CultureInfo.InvariantCulture)
         ));
     }
 

@@ -1,0 +1,34 @@
+dataset:
+  root: D:/projects/rl-ball-fetch/ball_fetch/vis_backbone/datasets/manual_capture/20260316_220723
+  train_split_file: temperal/data/splits_20260316_220723/train.txt
+  val_split_file: temperal/data/splits_20260316_220723/val.txt
+  test_split_file: temperal/data/splits_20260316_220723/test.txt
+  train_fraction: 1.0
+  observation_length: 8
+  frame_stride: 2
+  use_last_n_frames: false
+  observation_end_fraction: 0.5
+  sampling_mode: uniform_visible
+  img_size: 64
+model:
+  init_mode: finetune
+  c1: 16
+  c2: 32
+  c3: 64
+  s1: 8
+  s2: 8
+  s3: 8
+  head_hidden_dim: 64
+  pre_head_layernorm: false
+  pretrained_checkpoint: d:/projects/rl-ball-fetch/temperal/outputs/multiscale_spatial_prior_train_20260323/best.pt
+training:
+  seed: 43
+  device: auto
+  epochs: 40
+  batch_size: 8
+  lr: 0.001
+  weight_decay: 0.0
+  freeze_backbone_epochs: 0
+  log_every_batches: 20
+  output_dir: temperal/experiments/continuity_prior/output/spatial_prior_transfer_pilot_40ep_20260323/multiscale_transfer_spatial_finetune_100pct_obs50_seed43_20260323_40ep
+  tensorboard_dir: temperal/experiments/continuity_prior/output/spatial_prior_transfer_pilot_40ep_20260323/multiscale_transfer_spatial_finetune_100pct_obs50_seed43_20260323_40ep/tb

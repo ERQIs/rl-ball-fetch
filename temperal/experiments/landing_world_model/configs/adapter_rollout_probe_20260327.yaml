@@ -1,0 +1,23 @@
+dataset:
+  root: "D:/projects/rl-ball-fetch/ball_fetch/vis_backbone/datasets/manual_capture/20260316_220723"
+  split_file: "temperal/data/splits_20260316_220723/test.txt"
+  img_size: 64
+  grayscale: true
+  out_channels: 3
+  observation_length: 8
+  observation_end_fraction: 0.5
+  sampling_mode: "uniform_visible"
+
+model:
+  checkpoint: "d:/projects/rl-ball-fetch/temperal/experiments/continuity_prior/output/multiscale_future_decoder_adapter_unfreeze_formal_seed42_20260326/best.pt"
+  checkpoint_type: "adapter"
+
+rollout:
+  max_steps: 96
+  landing_py_threshold: 0.6
+  use_linear_interp: true
+
+evaluation:
+  max_episodes: null
+  device: "auto"
+  output_dir: "temperal/experiments/landing_world_model/output/adapter_rollout_probe_20260327"

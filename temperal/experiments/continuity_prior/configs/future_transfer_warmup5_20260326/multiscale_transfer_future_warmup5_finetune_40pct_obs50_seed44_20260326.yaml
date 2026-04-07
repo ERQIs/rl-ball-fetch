@@ -1,0 +1,34 @@
+dataset:
+  root: D:/projects/rl-ball-fetch/ball_fetch/vis_backbone/datasets/manual_capture/20260316_220723
+  train_split_file: temperal/data/splits_20260316_220723/train.txt
+  val_split_file: temperal/data/splits_20260316_220723/val.txt
+  test_split_file: temperal/data/splits_20260316_220723/test.txt
+  train_fraction: 0.4
+  observation_length: 8
+  frame_stride: 2
+  use_last_n_frames: false
+  observation_end_fraction: 0.5
+  sampling_mode: uniform_visible
+  img_size: 64
+model:
+  init_mode: finetune
+  pretrained_checkpoint: temperal/outputs/multiscale_future_formal_seed42_20260316_220723/best.pt
+  c1: 8
+  c2: 8
+  c3: 8
+  s1: 8
+  s2: 8
+  s3: 8
+  head_hidden_dim: 64
+  pre_head_layernorm: false
+training:
+  seed: 44
+  device: auto
+  epochs: 20
+  batch_size: 8
+  lr: 0.001
+  weight_decay: 0.0
+  freeze_backbone_epochs: 5
+  log_every_batches: 20
+  output_dir: temperal/experiments/continuity_prior/output/future_transfer_warmup5_20260326/multiscale_transfer_future_warmup5_finetune_40pct_obs50_seed44_20260326
+  tensorboard_dir: temperal/experiments/continuity_prior/output/future_transfer_warmup5_20260326/multiscale_transfer_future_warmup5_finetune_40pct_obs50_seed44_20260326/tb

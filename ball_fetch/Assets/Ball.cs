@@ -9,8 +9,12 @@ public class Ball : MonoBehaviour
     [HideInInspector] public float predictedT;
 
     private bool landed = false;
+    private float launchTime;
 
     public float gravityScale = 0.35f; // 1=正常，0.35=慢很多
+
+    public float ElapsedFlightTime => Mathf.Max(0f, Time.time - launchTime);
+    public float RemainingFlightTime => Mathf.Max(0f, predictedT - ElapsedFlightTime);
 
     private void Awake()
     {
@@ -47,5 +51,10 @@ public class Ball : MonoBehaviour
     public void ResetLandingCheck()
     {
         landed = false;
+    }
+
+    public void MarkLaunched()
+    {
+        launchTime = Time.time;
     }
 }

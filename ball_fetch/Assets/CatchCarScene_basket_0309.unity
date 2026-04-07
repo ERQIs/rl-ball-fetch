@@ -295,6 +295,7 @@ GameObject:
   - component: {fileID: 265686995}
   - component: {fileID: 265686996}
   - component: {fileID: 265686997}
+  - component: {fileID: 265686998}
   m_Layer: 0
   m_Name: Car
   m_TagString: Untagged
@@ -474,7 +475,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 265686987}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5d1c4e0b1822b495aa52bc52839ecb30, type: 3}
   m_Name: 
@@ -510,7 +511,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3a5c9d521e5ef4759a8246a07d52221e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  DecisionPeriod: 3
+  DecisionPeriod: 4
   DecisionStep: 0
   TakeActionsBetweenDecisions: 1
 --- !u!114 &265686996
@@ -553,10 +554,28 @@ MonoBehaviour:
   grayscale: 1
   autoStartOnPlay: 1
   toggleCaptureKey: 116
-  targetTrajectories: 0
+  targetTrajectories: 1000
   maxFramesPerTrajectory: 0
   outputRelativePath: vis_backbone/datasets/manual_capture
   writePng: 1
+--- !u!114 &265686998
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 265686987}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7c15c0d80e9d4747b40c7c1c81e977af, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  agent: {fileID: 265686993}
+  minRemainingTime: 0.05
+  motionStartFraction: 0.5
+  stopDistance: 0.05
+  zeroActionWhenNoBall: 1
+  drawDebugLine: 1
 --- !u!1 &415530716
 GameObject:
   m_ObjectHideFlags: 0
@@ -955,12 +974,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   ballPrefab: {fileID: 40827670}
   fixedSpawnPosition: {x: 0, y: 1.5, z: 15}
-  landingMinRadius: 3
-  landingMaxRadius: 3.01
-  landingSectorAngleDeg: 60
+  landingMinRadius: 0
+  landingMaxRadius: 6
+  landingSectorAngleDeg: 360
   landingHeightOffset: 0
-  Tmin: 2.25
-  Tmax: 2.3
+  Tmin: 2.5
+  Tmax: 3
+  gravityScaleMin: 0.7
+  gravityScaleMax: 0.7
   showLandingMarker: 0
   markerScale: 0.35
   markerColor: {r: 1, g: 0, b: 0, a: 1}
@@ -1180,13 +1201,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1747253660}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.10452837, y: 0, z: 0, w: 0.9945219}
+  m_LocalRotation: {x: -0.19080894, y: 0, z: 0, w: 0.9816273}
   m_LocalPosition: {x: -0.012, y: 1.55, z: -0.72}
   m_LocalScale: {x: 2, y: 2, z: 2}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 265686991}
-  m_LocalEulerAnglesHint: {x: -12, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: -22, y: 0, z: 0}
 --- !u!81 &1747253662
 AudioListener:
   m_ObjectHideFlags: 0
@@ -1228,7 +1249,7 @@ Camera:
     height: 1
   near clip plane: 0.01
   far clip plane: 1000
-  field of view: 26.991467
+  field of view: 50
   orthographic: 0
   orthographic size: 5
   m_Depth: 0

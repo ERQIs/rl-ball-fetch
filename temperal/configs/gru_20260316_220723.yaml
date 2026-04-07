@@ -1,0 +1,35 @@
+dataset:
+  root: "D:/projects/rl-ball-fetch/ball_fetch/vis_backbone/datasets/manual_capture/20260316_220723"
+  train_split_file: "temperal/data/splits_20260316_220723/train.txt"
+  val_split_file: "temperal/data/splits_20260316_220723/val.txt"
+  test_split_file: "temperal/data/splits_20260316_220723/test.txt"
+  observation_length: 16
+  frame_stride: 1
+  use_last_n_frames: false
+  observation_end_fraction: 0.67
+  sampling_mode: "uniform_visible"
+  img_size: 64
+  grayscale: true
+
+model:
+  name: cnn_gru
+  encoder_channels: [16,32,64]
+  rnn_hidden: 128
+  rnn_layers: 1
+  hidden_dim: 128
+
+training:
+  seed: 42
+  device: auto
+  epochs: 10
+  batch_size: 8
+  lr: 5e-4
+  weight_decay: 0.0
+  output_dir: "temperal/outputs/gru_exp_20260316_220723"
+
+eval:
+  thresholds: [0.2]
+
+logging:
+  checkpoint_freq: 1
+  save_predictions: true

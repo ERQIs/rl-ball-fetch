@@ -1,0 +1,46 @@
+dataset:
+  root: d:/projects/rl-ball-fetch/ball_fetch/vis_backbone/datasets/manual_capture/20260401_101517
+  img_size: 64
+  grayscale: true
+  out_channels: 3
+  window_length: 8
+  window_stride: 4
+  forward_speed_scale: 8.0
+  lateral_speed_scale: 8.0
+  split_seed: 42
+  train_ratio: 0.8
+  val_ratio: 0.1
+
+model:
+  init_mode: hierarchical
+  init_checkpoint: d:/projects/rl-ball-fetch/temperal/experiments/landing_world_model/output/hierarchical_motion_landing_unfreeze_dynamics_20ep_20260327/best.pt
+  init_strict: false
+  load_long_memory: true
+  self_state_dim: 2
+  c1: 8
+  c2: 8
+  c3: 8
+  s1: 8
+  s2: 8
+  s3: 8
+  token_dim: 64
+  self_state_hidden_dim: 32
+  self_state_token_dim: 32
+  gru_hidden_dim: 64
+  gru_layers: 1
+  policy_hidden_dim: 64
+  value_hidden_dim: 64
+  warmup_head_hidden_dim: 64
+  action_dim: 2
+  freeze_local_encoder: true
+  freeze_local_dynamics: false
+
+training:
+  output_dir: d:/projects/rl-ball-fetch/temperal/experiments/embodied_control/output/offline_warmup_manual_capture_20260401_101517
+  seed: 42
+  device: auto
+  epochs: 20
+  batch_size: 4
+  lr: 3.0e-4
+  weight_decay: 0.0
+  time_loss_weight: 0.25

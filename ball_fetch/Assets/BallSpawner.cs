@@ -17,6 +17,10 @@ public class BallSpawner : MonoBehaviour
     public float Tmin = 1.0f;
     public float Tmax = 1.8f;
 
+    [Header("Gravity Scale Range")]
+    public float gravityScaleMin = 0f;
+    public float gravityScaleMax = 0f;
+
     [Header("Debug")]
     public bool showLandingMarker = true;
     public float markerScale = 0.35f;
@@ -42,17 +46,32 @@ public class BallSpawner : MonoBehaviour
         Vector3 target = SampleLandingPoint(agent);
 
         float T = Random.Range(Tmin, Tmax);
-        float gravityScale = ballInstance != null ? ballInstance.gravityScale : 1f;
+        float fallbackGravityScale = ballInstance != null ? ballInstance.gravityScale : 1f;
+        float gravityScale = SampleGravityScale(fallbackGravityScale);
+        ballInstance.gravityScale = gravityScale;
         Vector3 g = Physics.gravity * gravityScale;
         Vector3 v0 = (target - spawnPos - 0.5f * g * T * T) / T;
 
         ballInstance.predictedLandingPoint = target;
         ballInstance.predictedT = T;
         ballInstance.ResetLandingCheck();
+        ballInstance.MarkLaunched();
         ballInstance.rb.linearVelocity = v0;
         UpdateLandingMarker(target);
 
         return ballInstance;
+    }
+
+    private float SampleGravityScale(float fallbackGravityScale)
+    {
+        if (gravityScaleMin <= 0f || gravityScaleMax <= 0f)
+        {
+            return fallbackGravityScale;
+        }
+
+        float minScale = Mathf.Min(gravityScaleMin, gravityScaleMax);
+        float maxScale = Mathf.Max(gravityScaleMin, gravityScaleMax);
+        return Random.Range(minScale, maxScale);
     }
 
     private Vector3 SampleLandingPoint(CarCatcherAgent agent)

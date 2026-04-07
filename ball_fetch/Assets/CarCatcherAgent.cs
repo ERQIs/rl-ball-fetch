@@ -60,6 +60,7 @@ public class CarCatcherAgent : Agent
     private float lastBallDistance;
     private float lastLandingDistance;
     private int episodeIndex = -1;
+    private LandingInterceptHeuristic landingInterceptHeuristic;
 
     public Vector2 LastAction => lastAction;
     public Ball CurrentBall => currentBall;
@@ -68,6 +69,7 @@ public class CarCatcherAgent : Agent
     public override void Initialize()
     {
         if (rb == null) rb = GetComponent<Rigidbody>();
+        landingInterceptHeuristic = GetComponent<LandingInterceptHeuristic>();
 
         fixedRotation = Quaternion.identity;
         rb.centerOfMass = new Vector3(0f, -0.25f, 0f);
@@ -238,6 +240,21 @@ public class CarCatcherAgent : Agent
         ca[0] = 0f; // forward/backward
         ca[1] = 0f; // left/right
 
+        if (landingInterceptHeuristic == null)
+        {
+            landingInterceptHeuristic = GetComponent<LandingInterceptHeuristic>();
+        }
+
+        if (landingInterceptHeuristic != null && landingInterceptHeuristic.isActiveAndEnabled)
+        {
+            if (landingInterceptHeuristic.TryComputeAction(out Vector2 interceptAction))
+            {
+                ca[0] = interceptAction.x;
+                ca[1] = interceptAction.y;
+                return;
+            }
+        }
+
         if (Input.GetKey(KeyCode.W)) ca[0] += 1f;
         if (Input.GetKey(KeyCode.S)) ca[0] -= 1f;
         if (Input.GetKey(KeyCode.D)) ca[1] += 1f;
@@ -267,9 +284,9 @@ public class CarCatcherAgent : Agent
 
     private bool IsOutOfArena()
     {
-        Vector3 p = transform.position;
-        Vector2 planar = new Vector2(p.x, p.z);
-        return planar.magnitude > arenaRadius;
+        Vector3 offsetFromReset = transform.position - episodeStartPosition;
+        Vector2 planarOffset = new Vector2(offsetFromReset.x, offsetFromReset.z);
+        return planarOffset.magnitude > arenaRadius + 1f;
     }
 
     private void OnGUI()

@@ -1,0 +1,33 @@
+dataset:
+  root: "D:/projects/rl-ball-fetch/ball_fetch/vis_backbone/datasets/manual_capture/20260314_140730"
+  train_split_file: "temperal/data/splits/train.txt"
+  val_split_file: "temperal/data/splits/val.txt"
+  test_split_file: "temperal/data/splits/test.txt"
+  observation_length: 8
+  frame_stride: 2
+  use_last_n_frames: false
+  observation_end_fraction: 0.67
+  sampling_mode: "uniform_visible"
+  img_size: 64
+  grayscale: true
+
+model:
+  name: single_frame
+  encoder_channels: [16,32,64]
+  hidden_dim: 128
+
+training:
+  seed: 42
+  device: auto
+  epochs: 5
+  batch_size: 16
+  lr: 1e-3
+  weight_decay: 0.0
+  output_dir: "temperal/outputs/single_frame_exp"
+
+eval:
+  thresholds: [0.2]
+
+logging:
+  checkpoint_freq: 1
+  save_predictions: true

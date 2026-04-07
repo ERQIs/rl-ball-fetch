@@ -1,0 +1,43 @@
+dataset:
+  root: "D:/projects/rl-ball-fetch/ball_fetch/vis_backbone/datasets/manual_capture/20260316_220723"
+  train_split_file: "temperal/data/splits_20260316_220723/train.txt"
+  val_split_file: "temperal/data/splits_20260316_220723/val.txt"
+  test_split_file: "temperal/data/splits_20260316_220723/test.txt"
+  img_size: 64
+  grayscale: true
+  out_channels: 3
+  observation_end_fraction: 0.5
+  frame_stride: 2
+  window_length: 8
+  window_hop: 4
+  train_max_episodes: 128
+  val_max_episodes: 64
+  test_max_episodes: 64
+
+model:
+  init_checkpoint: "d:/projects/rl-ball-fetch/temperal/experiments/continuity_prior/output/multiscale_future_decoder_adapter_unfreeze_formal_seed42_20260326/best.pt"
+  init_strict: true
+  c1: 8
+  c2: 8
+  c3: 8
+  s1: 8
+  s2: 8
+  s3: 8
+  token_dim: 64
+  gru_hidden_dim: 64
+  gru_layers: 1
+  head_hidden_dim: 64
+  freeze_local_encoder: true
+  freeze_local_dynamics: false
+
+training:
+  seed: 42
+  device: auto
+  epochs: 20
+  batch_size: 8
+  lr: 3e-4
+  weight_decay: 0.0
+  output_dir: "temperal/experiments/landing_world_model/output/hierarchical_motion_landing_unfreeze_dynamics_20ep_20260327"
+
+evaluation:
+  success_threshold: 0.2

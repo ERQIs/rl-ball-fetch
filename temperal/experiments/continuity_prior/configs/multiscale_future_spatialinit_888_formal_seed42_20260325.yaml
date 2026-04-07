@@ -1,0 +1,45 @@
+dataset:
+  root: "D:/projects/rl-ball-fetch/ball_fetch/vis_backbone/datasets/manual_capture/20260316_220723"
+  train_split_file: "temperal/data/splits_20260316_220723/train.txt"
+  val_split_file: "temperal/data/splits_20260316_220723/val.txt"
+  test_split_file: "temperal/data/splits_20260316_220723/test.txt"
+  seq_len: 12
+  history_len: 8
+  future_len: 4
+  frame_stride: 2
+  clip_start_stride: 6
+  img_size: 64
+  grayscale: true
+  out_channels: 3
+  pos_cols: ["ball_px", "ball_py", "ball_pz"]
+  vel_cols: ["ball_vx", "ball_vy", "ball_vz"]
+
+model:
+  init_encoder_checkpoint: "d:/projects/rl-ball-fetch/temperal/experiments/continuity_prior/output/multiscale_spatial_prior_train_888_15ep_20260325/best.pt"
+  init_encoder_strict: true
+  c1: 8
+  c2: 8
+  c3: 8
+  s1: 8
+  s2: 8
+  s3: 8
+  decoder_proj_ch: 8
+  decoder_hidden_ch: 8
+  enable_frame_recon: true
+  future_recon_len: 4
+
+loss:
+  lambda_frame: 1.0
+  lambda_p: 1.0
+  lambda_v: 0.2
+
+training:
+  seed: 42
+  device: auto
+  epochs: 20
+  batch_size: 8
+  lr: 3e-4
+  weight_decay: 0.0
+  log_every_batches: 50
+  output_dir: "temperal/experiments/continuity_prior/output/multiscale_future_spatialinit_888_formal_seed42_20260325"
+  tensorboard_dir: "temperal/experiments/continuity_prior/output/multiscale_future_spatialinit_888_formal_seed42_20260325/tb"
